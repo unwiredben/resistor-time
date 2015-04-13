@@ -1,0 +1,43 @@
+{
+    "appKeys": {
+        "dummy": 0
+    },
+    "capabilities": [
+        ""
+    ],
+    "companyName": "Ben Combee",
+    "longName": "Resistor Time",
+    "projectType": "native",
+    "resources": {
+        "media": [
+            {
+                "file": "images/resistor_on_green.png",
+                "name": "RESISTOR_IMG",
+                "type": "png"
+            },
+            {
+                "characterRegex": "[0123456789R]",
+                "file": "fonts/OCRA.ttf",
+                "name": "FONT_OCR_A_20",
+                "type": "font"
+            },
+            {
+                "file": "images/omega.png",
+                "menuIcon": true,
+                "name": "APPICON",
+                "type": "png"
+            }
+        ]
+    },
+    "sdkVersion": "3",
+    "shortName": "Resistor",
+    "targetPlatforms": [
+        "basalt"
+    ],
+    "uuid": "45c255c4-9cbc-4c00-8cf3-3a7e6f92b606",
+    "versionCode": 1,
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": true
+    }
+}
