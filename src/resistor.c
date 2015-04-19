@@ -70,6 +70,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
         GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
     
     // draw the resistor and the stripes
+    graphics_context_set_compositing_mode(ctx, GCompOpSet);
     graphics_draw_bitmap_in_rect(ctx, s_resistor_img, GRect(0, RESISTOR_BASE_Y, 144, 43));
 
     graphics_context_set_fill_color(ctx, resistor_colors[s_last_time.tm_hour / 10]);

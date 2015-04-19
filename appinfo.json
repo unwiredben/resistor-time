@@ -11,8 +11,13 @@
     "resources": {
         "media": [
             {
-                "file": "images/resistor_on_green.png",
+                "file": "images/resistor.png",
                 "name": "RESISTOR_IMG",
+                "type": "png"
+            },
+            {
+                "file": "images/resistor_on_green.png",
+                "name": "RESISTOR_ON_GREEN_IMG",
                 "type": "png"
             },
             {
