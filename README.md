@@ -11,4 +11,6 @@ Version 1.1 adds an app config screen on the phone to switch between green, blac
 
 Licensed under the MIT License, see LICENSE for details.
 
-![Screenshot](screenshots/resistor-time-screenshot.png)
+![Screenshot - White on Green](screenshots/resistor-time-green.png)
+![Screenshot - Black on White](screenshots/resistor-time-white.png)
+![Screenshot - White on Black](screenshots/resistor-time-black.png)
