@@ -65,7 +65,7 @@
 	}
 
 	// setup button handler for buttonDone
-	$("buttonDone").click(function() {
+	$("#buttonDone").click(function() {
 		var return_to = getParameterByName("return_to") || "pebblejs://close";
 		var color = $('[name=color]:checked').val();
 		document.location = return_to + "#color=" + color;
