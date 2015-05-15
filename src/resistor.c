@@ -77,15 +77,19 @@ static void sync_changed_handler(const uint32_t key,
     APP_LOG(APP_LOG_LEVEL_DEBUG, "sync_changed: key %" PRIu32, key);
     switch (key) {
         case BACKGROUND_COLOR_KEY:
-            pcb_background.argb = new_tuple->value->uint8;
-            persist_write_int(BACKGROUND_COLOR_KEY, pcb_background.argb);
-            dirty = true;
+            if (pcb_background.argb != new_tuple->value->uint8) {
+                pcb_background.argb = new_tuple->value->uint8;
+                persist_write_int(BACKGROUND_COLOR_KEY, pcb_background.argb);
+                dirty = true;
+            }
             break;
 
         case SILKSCREEN_COLOR_KEY:
-            pcb_silkscreen.argb = new_tuple->value->uint8;
-            persist_write_int(SILKSCREEN_COLOR_KEY, pcb_silkscreen.argb);
-            dirty = true;
+            if (pcb_silkscreen.argb != new_tuple->value->uint8) {
+                pcb_silkscreen.argb = new_tuple->value->uint8;
+                persist_write_int(SILKSCREEN_COLOR_KEY, pcb_silkscreen.argb);
+                dirty = true;
+            }
             break;
 
         default:
