@@ -19,24 +19,22 @@
 </head>
 <body>
 <div class="container">
-	<h2>Resistor Time</h2>
-
 	<div class="panel panel-default">
 	<div class="panel-heading">Silkscreen color:</div>
 	<div class="panel-body">
 		<div class="radio">
 			<label>
-			<input id="colorGreen" name="color" type="radio" value="green">	Green with white text
+			<input id="color_green" name="color" type="radio" value="green">Green with white text
 			</label>
 		</div>
 		<div class="radio">
 			<label>
-			<input id="colorBlack" name="color" type="radio" value="black">	Black with white text
+			<input id="color_black" name="color" type="radio" value="black">Black with white text
 			</label>
 		</div>
 		<div class="radio">
 			<label>
-			<input id="colorWhite" name="color" type="radio" value="white">	White with black text
+			<input id="color_white" name="color" type="radio" value="white">White with black text
 			</label>
 		</div>
 	</div>
@@ -46,11 +44,32 @@
 </div>
 
 <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <!-- Include all compiled plugins (below), or include individual files as needed -->
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
 <script>
+
+	function getParameterByName(name) {
+		name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+		var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+		results = regex.exec(location.search);
+		return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+	}
+
 	// setup button handler for buttonDone
+	$("buttonDone").click(function() {
+		var return_to = getParameterByName("return_to") || "pebblejs://close";
+		var color = $('[name=color]:checked').val();
+		document.location = return_to + "#color=" + color;
+	});
+	
+	$(document).ready(function() {
+		// get default value from the url
+		var color = getParameterByName("color") || "green";
+		if (color) {
+			$('color_' + color).prop("checked", true);
+		}
+	});
 </script>
 </body>
 </html>
