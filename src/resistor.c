@@ -8,7 +8,12 @@
 // white silkscreen of Rmmdd
 
 #include <pebble.h>
-
+#include <inttypes.h>
+    
+// used for slots in AppSync and Persistant Storage
+#define BACKGROUND_COLOR_KEY    0
+#define SILKSCREEN_COLOR_KEY    1
+    
 static const GColor8 resistor_colors[10] = {
     { /* 0 */ .argb = GColorBlackARGB8 },
     { /* 1 */ .argb = GColorWindsorTanARGB8 },
@@ -28,8 +33,8 @@ static const GRect stripe2_box = { { 54, RESISTOR_BASE_Y + 8 }, { 9, 27 } };
 static const GRect stripe3_box = { { 70, RESISTOR_BASE_Y + 8 }, { 8, 27 } };
 static const GRect stripe4_box = { { 85, RESISTOR_BASE_Y + 8 }, { 8, 27 } };
 
-static const GColor8 pcb_background = { .argb = GColorKellyGreenARGB8 };
-static const GColor8 pcb_silkscreen = { .argb = GColorWhiteARGB8 };
+static GColor8 pcb_background = { .argb = GColorKellyGreenARGB8 };
+static GColor8 pcb_silkscreen = { .argb = GColorWhiteARGB8 };
 
 static GFont s_ocra_font;
 static GBitmap *s_resistor_img;
@@ -38,6 +43,84 @@ static struct tm s_last_time;
     
 static Window *s_main_window;
 static Layer *s_canvas_layer;
+
+/********************************** CONFIG ************************************/
+
+static const char *translate_error(AppMessageResult result) {
+    switch (result) {
+        case APP_MSG_OK: return "APP_MSG_OK";
+        case APP_MSG_SEND_TIMEOUT: return "APP_MSG_SEND_TIMEOUT";
+        case APP_MSG_SEND_REJECTED: return "APP_MSG_SEND_REJECTED";
+        case APP_MSG_NOT_CONNECTED: return "APP_MSG_NOT_CONNECTED";
+        case APP_MSG_APP_NOT_RUNNING: return "APP_MSG_APP_NOT_RUNNING";
+        case APP_MSG_INVALID_ARGS: return "APP_MSG_INVALID_ARGS";
+        case APP_MSG_BUSY: return "APP_MSG_BUSY";
+        case APP_MSG_BUFFER_OVERFLOW: return "APP_MSG_BUFFER_OVERFLOW";
+        case APP_MSG_ALREADY_RELEASED: return "APP_MSG_ALREADY_RELEASED";
+        case APP_MSG_CALLBACK_ALREADY_REGISTERED: return "APP_MSG_CALLBACK_ALREADY_REGISTERED";
+        case APP_MSG_CALLBACK_NOT_REGISTERED: return "APP_MSG_CALLBACK_NOT_REGISTERED";
+        case APP_MSG_OUT_OF_MEMORY: return "APP_MSG_OUT_OF_MEMORY";
+        case APP_MSG_CLOSED: return "APP_MSG_CLOSED";
+        case APP_MSG_INTERNAL_ERROR: return "APP_MSG_INTERNAL_ERROR";
+        default: return "UNKNOWN ERROR";
+    }
+}
+
+static AppSync s_sync;
+static uint8_t s_sync_buffer[32];
+
+static void sync_changed_handler(const uint32_t key,
+                                 const Tuple *new_tuple,
+                                 const Tuple *old_tuple,
+                                 void *context) {
+    bool dirty = false;
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "sync_changed: key %" PRIu32, key);
+    switch (key) {
+        case BACKGROUND_COLOR_KEY:
+            pcb_background.argb = new_tuple->value->uint8;
+            persist_write_int(BACKGROUND_COLOR_KEY, pcb_background.argb);
+            dirty = true;
+            break;
+
+        case SILKSCREEN_COLOR_KEY:
+            pcb_silkscreen.argb = new_tuple->value->uint8;
+            persist_write_int(SILKSCREEN_COLOR_KEY, pcb_silkscreen.argb);
+            dirty = true;
+            break;
+
+        default:
+            // ignore unknown keys
+            break;
+    }
+    if (dirty && s_canvas_layer) {
+        layer_mark_dirty(s_canvas_layer);
+    }
+}
+
+static void sync_error_handler(DictionaryResult dict_error,
+                               AppMessageResult app_message_error, 
+                               void *context) {
+    APP_LOG(APP_LOG_LEVEL_WARNING, "sync error: %s", translate_error(app_message_error));
+}
+
+static void config_init(void) {
+    app_message_open(
+        app_message_inbox_size_maximum(),
+        app_message_outbox_size_maximum());
+
+    Tuplet initial_values[] = {
+        TupletInteger(BACKGROUND_COLOR_KEY, pcb_background.argb),
+        TupletInteger(SILKSCREEN_COLOR_KEY, pcb_silkscreen.argb)
+    };
+    app_sync_init(
+        &s_sync, s_sync_buffer, sizeof(s_sync_buffer), 
+        initial_values, ARRAY_LENGTH(initial_values), 
+        sync_changed_handler, sync_error_handler, NULL);
+}
+
+static void config_deinit(void) {
+    app_sync_deinit(&s_sync);
+}
 
 /************************************ UI **************************************/
 
@@ -102,6 +185,15 @@ static void window_unload(Window *window) {
 /*********************************** App **************************************/
 
 static void init() {
+    if (!persist_exists(BACKGROUND_COLOR_KEY)) {
+        persist_write_int(BACKGROUND_COLOR_KEY, pcb_background.argb);
+        persist_write_int(SILKSCREEN_COLOR_KEY, pcb_silkscreen.argb);
+    }
+    else {
+        pcb_background.argb = persist_read_int(BACKGROUND_COLOR_KEY);
+        pcb_silkscreen.argb = persist_read_int(SILKSCREEN_COLOR_KEY);
+    }
+
     time_t t = time(NULL);
     struct tm *time_now = localtime(&t);
     tick_handler(time_now, MINUTE_UNIT);
@@ -119,9 +211,11 @@ static void init() {
     window_stack_push(s_main_window, true);
 
     tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+    config_init();
 }
 
 static void deinit() {
+    config_deinit();
     window_destroy(s_main_window);
     gbitmap_destroy(s_resistor_img);
     fonts_unload_custom_font(s_ocra_font);

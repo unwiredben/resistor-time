@@ -1,9 +1,10 @@
 {
     "appKeys": {
-        "dummy": 0
+        "backgroundColor": 0,
+        "silkScreenColor": 1
     },
     "capabilities": [
-        ""
+        "configurable"
     ],
     "companyName": "Ben Combee",
     "longName": "Resistor Time",
@@ -11,13 +12,9 @@
     "resources": {
         "media": [
             {
-                "file": "images/resistor.png",
-                "name": "RESISTOR_IMG",
-                "type": "png"
-            },
-            {
-                "file": "images/resistor_on_green.png",
-                "name": "RESISTOR_ON_GREEN_IMG",
+                "file": "images/omega.png",
+                "menuIcon": true,
+                "name": "APPICON",
                 "type": "png"
             },
             {
@@ -27,9 +24,13 @@
                 "type": "font"
             },
             {
-                "file": "images/omega.png",
-                "menuIcon": true,
-                "name": "APPICON",
+                "file": "images/resistor_on_green.png",
+                "name": "RESISTOR_ON_GREEN_IMG",
+                "type": "png"
+            },
+            {
+                "file": "images/resistor.png",
+                "name": "RESISTOR_IMG",
                 "type": "png"
             }
         ]
@@ -40,8 +41,7 @@
         "basalt"
     ],
     "uuid": "45c255c4-9cbc-4c00-8cf3-3a7e6f92b606",
-    "versionCode": 1,
-    "versionLabel": "1.0",
+    "versionLabel": "1.1",
     "watchapp": {
         "watchface": true
     }
