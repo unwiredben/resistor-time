@@ -1,6 +1,8 @@
 # resistor-time
 Resistor color watchface for Pebble Time
 
+[Available on the Pebble App Store](https://apps.getpebble.com/applications/55561ff444dad6e1470000df)
+
 [![Build Status](https://travis-ci.org/unwiredben/resistor-time.svg)](https://travis-ci.org/unwiredben/resistor-time)
 
 This shows the current time as a resistor with the color code matching the time of day in 24-hour time.
