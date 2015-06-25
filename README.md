@@ -1,7 +1,7 @@
 # resistor-time
 Resistor color watchface for Pebble Time
 
-[![Available on the Pebble App Store](http://pblweb.com/badge/55561ff444dad6e1470000df/orange/medium/)
+[![Available on the Pebble App Store](http://pblweb.com/badge/55561ff444dad6e1470000df/orange/medium/)](https://apps.getpebble.com/applications/55561ff444dad6e1470000df)
 
 [![Build Status](https://travis-ci.org/unwiredben/resistor-time.svg)](https://travis-ci.org/unwiredben/resistor-time)
 
