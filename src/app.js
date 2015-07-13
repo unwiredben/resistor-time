@@ -84,12 +84,16 @@ Pebble.addEventListener("ready", function(e) {
 });
 
 Pebble.addEventListener("showConfiguration", function(e) {
-    Pebble.openURL('http://combee.net/resistor-time/config.html');
+    var color = localStorage.getItem("color");
+    Pebble.openURL(
+        'http://www.combee.net/resistor-time/config.html' +
+        (color ? "?color=" + color : ""));
 });
 
 Pebble.addEventListener("webviewclosed", function(e) {
     var msg = {};
-    switch (e.response) {
+    var color = e.response;
+    switch (color) {
         case "white":
             msg.backgroundColor = PEBBLE_COLORS.White;
             msg.silkScreenColor = PEBBLE_COLORS.Black;
@@ -98,11 +102,14 @@ Pebble.addEventListener("webviewclosed", function(e) {
             msg.backgroundColor = PEBBLE_COLORS.Black;
             msg.silkScreenColor = PEBBLE_COLORS.White;
             break;
-        case "green":
         default:
+            color = "green";
+            /* falls through */
+        case "green":
             msg.backgroundColor = PEBBLE_COLORS.KellyGreen;
             msg.silkScreenColor = PEBBLE_COLORS.White;
             break;
     }
+    localStorage.setItem("color", color);
     Pebble.sendAppMessage(msg, sendSuccess, sendFailure);
 });

@@ -12,9 +12,10 @@
     "resources": {
         "media": [
             {
-                "file": "images/resistor.png",
-                "name": "RESISTOR_IMG",
-                "type": "png"
+                "characterRegex": "[0123456789R]",
+                "file": "fonts/OCRA.ttf",
+                "name": "FONT_OCR_A_20",
+                "type": "font"
             },
             {
                 "file": "images/omega.png",
@@ -23,10 +24,9 @@
                 "type": "png"
             },
             {
-                "characterRegex": "[0123456789R]",
-                "file": "fonts/OCRA.ttf",
-                "name": "FONT_OCR_A_20",
-                "type": "font"
+                "file": "images/resistor.png",
+                "name": "RESISTOR_IMG",
+                "type": "png"
             }
         ]
     },
@@ -36,7 +36,6 @@
         "basalt"
     ],
     "uuid": "45c255c4-9cbc-4c00-8cf3-3a7e6f92b606",
-    "versionCode": 1,
     "versionLabel": "1.1",
     "watchapp": {
         "watchface": true
