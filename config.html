@@ -1,62 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="utf-8">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+	<meta charset="UTF-8">
+	<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0" name="viewport">
+	<link rel="stylesheet" href="slate/css/slate.min.css">
 	<title>Resistor Time Configuration</title>
-
-	<!-- Bootstrap -->
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
-
-	<!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-	<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-	<!--[if lt IE 9]>
-	<script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
-	<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-	<![endif]-->
-
-	<style type="text/css">
-	body {
-		padding-top: 20px;
-		padding-bottom: 20px;
-		background-color: #414E4C;
-	}
-	</style>	
 </head>
 <body>
-<div class="container">
-	<div class="panel panel-default">
-	<div class="panel-heading">Silkscreen color:</div>
-	<div class="panel-body">
-		<div class="radio">
-			<label>
-			<input id="color_green" name="color" type="radio" value="green">Green with white text
+
+	<div class="item-container">
+		<div class="item-container-header">Silkscreen color</div>
+		<div class="item-container-content">
+			<label class="item">Green with white text
+			<input id="color_green" type="radio" class="item-radio" name="color" type="radio-1" value="green">
 			</label>
-		</div>
-		<div class="radio">
-			<label>
-			<input id="color_black" name="color" type="radio" value="black">Black with white text
+			<label class="item">Black with white text
+			<input id="color_black" type="radio" class="item-radio" name="color" type="radio-1" value="black">
 			</label>
-		</div>
-		<div class="radio">
-			<label>
-			<input id="color_white" name="color" type="radio" value="white">White with black text
+			<label class="item">White with black text
+			<input id="color_white" type="radio" class="item-radio" name="color" type="radio-1" value="white">
 			</label>
 		</div>
 	</div>
+
+	<div class="item-container">
+		<div class="button-container">
+			<input id="buttonDone" type="button" class="item-button" value="Done">
+		</div>
 	</div>
 
-	<button id="buttonDone" class="btn btn-default">Done</button>
-</div>
-
-<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-<!-- Include all compiled plugins (below), or include individual files as needed -->
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="slate/js/slate.min.js"></script>
 <script>
-
 	function getParameterByName(name) {
 		name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
 		var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
