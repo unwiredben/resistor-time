@@ -14,6 +14,6 @@ Licensed under the MIT License, see LICENSE for details.
 
 [![Available on the Pebble App Store](http://pblweb.com/badge/55561ff444dad6e1470000df/black/small)](https://apps.getpebble.com/applications/55561ff444dad6e1470000df)
 
-![Screenshot - White on Green](screenshots/resistor-time-green.png)
-![Screenshot - Black on White](screenshots/resistor-time-white.png)
+![Screenshot - White on Green](screenshots/resistor-time-green.png) &nbsp;
+![Screenshot - Black on White](screenshots/resistor-time-white.png) &nbsp;
 ![Screenshot - White on Black](screenshots/resistor-time-black.png)
