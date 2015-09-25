@@ -27,12 +27,27 @@ static const GColor8 resistor_colors[10] = {
     { /* 9 */ .argb = GColorWhiteARGB8 },
 };
 
-#define RESISTOR_BASE_Y (56)
-static const GRect stripe1_box = { { 29, RESISTOR_BASE_Y + 2 }, { 8, 39 } };
-static const GRect stripe2_box = { { 54, RESISTOR_BASE_Y + 8 }, { 9, 27 } };
-static const GRect stripe3_box = { { 70, RESISTOR_BASE_Y + 8 }, { 8, 27 } };
-static const GRect stripe4_box = { { 85, RESISTOR_BASE_Y + 8 }, { 8, 27 } };
+#define TEXT_HEIGHT  (24)
+#if PBL_ROUND
+    #define RECT_WIDTH  (180)
+    #define RECT_HEIGHT (180)
+    #define Y_OFFSET (20)
+#else
+    #define RECT_WIDTH  (144)
+    #define RECT_HEIGHT (168)
+    #define Y_OFFSET (4)
+#endif
 
+#define RESISTOR_BASE_X ((int)((RECT_WIDTH - 144) / 2))
+#define RESISTOR_BASE_Y ((int)((RECT_HEIGHT - 43) / 2))
+static const GRect bitmap_box  = {{RESISTOR_BASE_X, RESISTOR_BASE_Y}, {144, 43}};
+static const GRect date_box    = {{0, Y_OFFSET}, {RECT_WIDTH, TEXT_HEIGHT}};
+static const GRect time_box    = {{0, RECT_HEIGHT - TEXT_HEIGHT - Y_OFFSET}, {RECT_WIDTH, TEXT_HEIGHT}};
+static const GRect stripe1_box = {{RESISTOR_BASE_X + 29, RESISTOR_BASE_Y + 2}, {8, 39}};
+static const GRect stripe2_box = {{RESISTOR_BASE_X + 54, RESISTOR_BASE_Y + 8}, {9, 27}};
+static const GRect stripe3_box = {{RESISTOR_BASE_X + 70, RESISTOR_BASE_Y + 8}, {8, 27}};
+static const GRect stripe4_box = {{RESISTOR_BASE_X + 85, RESISTOR_BASE_Y + 8}, {8, 27}};
+    
 static GColor8 pcb_background = { .argb = GColorKellyGreenARGB8 };
 static GColor8 pcb_silkscreen = { .argb = GColorWhiteARGB8 };
 
@@ -140,25 +155,29 @@ static void tick_handler(struct tm *tick_time, TimeUnits changed) {
 
 static void update_proc(Layer *layer, GContext *ctx) {
     graphics_context_set_fill_color(ctx, pcb_background);
-    graphics_fill_rect(ctx, GRect(0, 0, 144, 168), 0, GCornerNone);
+    graphics_fill_rect(ctx, layer_get_bounds(layer), 0, GCornerNone);
 
     graphics_context_set_text_color(ctx, pcb_silkscreen);
     char label[8];
 
     // draw "Rdate"
     snprintf(label, 8, "R%02d%02d", s_last_time.tm_mon + 1, s_last_time.tm_mday);
+    //graphics_context_set_fill_color(ctx, GColorBlack);
+    //graphics_fill_rect(ctx, date_box, 0, GCornerNone);
     graphics_draw_text(
-        ctx, label, s_ocra_font, GRect(4, 4, 144 - 8, 20),
+        ctx, label, s_ocra_font, date_box,
         GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
     // draw "time R"
     snprintf(label, 8, "%d%02d R", s_last_time.tm_hour, s_last_time.tm_min);
+    //graphics_context_set_fill_color(ctx, GColorBlack);
+    //graphics_fill_rect(ctx, time_box, 0, GCornerNone);
     graphics_draw_text(
-        ctx, label, s_ocra_font, GRect(4, 168 - 24 - 4, 144 - 8, 20),
+        ctx, label, s_ocra_font, time_box,
         GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
     
     // draw the resistor and the stripes
     graphics_context_set_compositing_mode(ctx, GCompOpSet);
-    graphics_draw_bitmap_in_rect(ctx, s_resistor_img, GRect(0, RESISTOR_BASE_Y, 144, 43));
+    graphics_draw_bitmap_in_rect(ctx, s_resistor_img, bitmap_box);
 
     graphics_context_set_fill_color(ctx, resistor_colors[s_last_time.tm_hour / 10]);
     graphics_fill_rect(ctx, stripe1_box, 0, GCornerNone);
