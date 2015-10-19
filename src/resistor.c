@@ -40,7 +40,7 @@ static const GColor8 resistor_colors[10] = {
 
 #define RESISTOR_BASE_X ((int)((RECT_WIDTH - 144) / 2))
 #define RESISTOR_BASE_Y ((int)((RECT_HEIGHT - 43) / 2))
-static const GRect bitmap_box  = {{RESISTOR_BASE_X, RESISTOR_BASE_Y}, {144, 43}};
+static const GRect bitmap_box  = {{0, RESISTOR_BASE_Y}, {RECT_WIDTH, 43}};
 static const GRect date_box    = {{0, Y_OFFSET}, {RECT_WIDTH, TEXT_HEIGHT}};
 static const GRect time_box    = {{0, RECT_HEIGHT - TEXT_HEIGHT - Y_OFFSET}, {RECT_WIDTH, TEXT_HEIGHT}};
 static const GRect stripe1_box = {{RESISTOR_BASE_X + 29, RESISTOR_BASE_Y + 2}, {8, 39}};
