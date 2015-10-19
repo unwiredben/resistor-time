@@ -123,9 +123,8 @@ static void sync_error_handler(DictionaryResult dict_error,
 }
 
 static void config_init(void) {
-    app_message_open(
-        app_message_inbox_size_maximum(),
-        app_message_outbox_size_maximum());
+    // no need for large inbox/outbox, just handling configuration messages
+    app_message_open(100, 100);
 
     Tuplet initial_values[] = {
         TupletInteger(BACKGROUND_COLOR_KEY, pcb_background.argb),
