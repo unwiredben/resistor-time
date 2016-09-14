@@ -1,0 +1,59 @@
+{
+    "author": "Ben Combee",
+    "dependencies": {
+        "pebble-clay": "^1.0.2",
+        "pebble-connection-vibes": "^1.0.1",
+        "pebble-events": "^1.1.0",
+        "pebble-packet": "^1.2.0"
+    },
+    "keywords": [],
+    "name": "resistor",
+    "pebble": {
+        "capabilities": [
+            "configurable"
+        ],
+        "displayName": "Resistor Time",
+        "enableMultiJS": true,
+        "messageKeys": [
+            "SILK_COLOR",
+            "BG_COLOR",
+            "VIBE_ON_BT"
+        ],
+        "projectType": "native",
+        "resources": {
+            "media": [
+                {
+                    "file": "images/resistor.png",
+                    "name": "RESISTOR_IMG",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/omega.png",
+                    "menuIcon": true,
+                    "name": "APPICON",
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk"
+                    ],
+                    "type": "bitmap"
+                },
+                {
+                    "characterRegex": "[0123456789R]",
+                    "file": "fonts/OCRA.ttf",
+                    "name": "FONT_OCR_A_20",
+                    "type": "font"
+                }
+            ]
+        },
+        "sdkVersion": "3",
+        "targetPlatforms": [
+            "basalt",
+            "chalk"
+        ],
+        "uuid": "45c255c4-9cbc-4c00-8cf3-3a7e6f92b606",
+        "watchapp": {
+            "watchface": true
+        }
+    },
+    "version": "1.4.0"
+}

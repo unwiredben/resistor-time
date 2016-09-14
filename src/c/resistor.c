@@ -9,11 +9,11 @@
 
 #include <pebble.h>
 #include <inttypes.h>
-    
-// used for slots in AppSync and Persistant Storage
-#define BACKGROUND_COLOR_KEY    0
-#define SILKSCREEN_COLOR_KEY    1
-    
+
+#include <pebble-events/pebble-events.h>
+#include <pebble-connection-vibes/connection-vibes.h>
+#include <pebble-packet/pebble-packet.h>
+
 static const GColor8 resistor_colors[10] = {
     { /* 0 */ .argb = GColorBlackARGB8 },
     { /* 1 */ .argb = GColorWindsorTanARGB8 },
@@ -27,15 +27,20 @@ static const GColor8 resistor_colors[10] = {
     { /* 9 */ .argb = GColorWhiteARGB8 },
 };
 
+// used for persistent storage
+#define STORAGE_KEY_BG_COLOR   (0)
+#define STORAGE_KEY_SILK_COLOR (1)
+#define STORAGE_KEY_VIBE_ON_BT (2)
+
 #define TEXT_HEIGHT  (24)
 #if PBL_ROUND
-    #define RECT_WIDTH  (180)
-    #define RECT_HEIGHT (180)
-    #define Y_OFFSET (20)
+#define RECT_WIDTH  (180)
+#define RECT_HEIGHT (180)
+#define Y_OFFSET (20)
 #else
-    #define RECT_WIDTH  (144)
-    #define RECT_HEIGHT (168)
-    #define Y_OFFSET (4)
+#define RECT_WIDTH  (144)
+#define RECT_HEIGHT (168)
+#define Y_OFFSET (4)
 #endif
 
 #define RESISTOR_BASE_X ((int)((RECT_WIDTH - 144) / 2))
@@ -47,97 +52,54 @@ static const GRect stripe1_box = {{RESISTOR_BASE_X + 29, RESISTOR_BASE_Y + 2}, {
 static const GRect stripe2_box = {{RESISTOR_BASE_X + 54, RESISTOR_BASE_Y + 8}, {9, 27}};
 static const GRect stripe3_box = {{RESISTOR_BASE_X + 70, RESISTOR_BASE_Y + 8}, {8, 27}};
 static const GRect stripe4_box = {{RESISTOR_BASE_X + 85, RESISTOR_BASE_Y + 8}, {8, 27}};
-    
-static GColor8 pcb_background = { .argb = GColorKellyGreenARGB8 };
-static GColor8 pcb_silkscreen = { .argb = GColorWhiteARGB8 };
+
+static GColor pcb_background = { .argb = GColorKellyGreenARGB8 };
+static GColor pcb_silkscreen = { .argb = GColorWhiteARGB8 };
+static ConnectionVibesState vibe_on_bt = ConnectionVibesStateDisconnect;
 
 static GFont s_ocra_font;
 static GBitmap *s_resistor_img;
 
 static struct tm s_last_time;
-    
+
 static Window *s_main_window;
 static Layer *s_canvas_layer;
 
+/********************************** UTILITY ************************************/
+
+static int persist_read_int_with_default(const uint32_t key, const int32_t defaultValue) {
+    if (!persist_exists(key)) {
+        persist_write_int(key, defaultValue);
+        return defaultValue;
+    }
+    else {
+        return persist_read_int(key);
+    }    
+}
+
 /********************************** CONFIG ************************************/
 
-static const char *translate_error(AppMessageResult result) {
-    switch (result) {
-        case APP_MSG_OK: return "APP_MSG_OK";
-        case APP_MSG_SEND_TIMEOUT: return "APP_MSG_SEND_TIMEOUT";
-        case APP_MSG_SEND_REJECTED: return "APP_MSG_SEND_REJECTED";
-        case APP_MSG_NOT_CONNECTED: return "APP_MSG_NOT_CONNECTED";
-        case APP_MSG_APP_NOT_RUNNING: return "APP_MSG_APP_NOT_RUNNING";
-        case APP_MSG_INVALID_ARGS: return "APP_MSG_INVALID_ARGS";
-        case APP_MSG_BUSY: return "APP_MSG_BUSY";
-        case APP_MSG_BUFFER_OVERFLOW: return "APP_MSG_BUFFER_OVERFLOW";
-        case APP_MSG_ALREADY_RELEASED: return "APP_MSG_ALREADY_RELEASED";
-        case APP_MSG_CALLBACK_ALREADY_REGISTERED: return "APP_MSG_CALLBACK_ALREADY_REGISTERED";
-        case APP_MSG_CALLBACK_NOT_REGISTERED: return "APP_MSG_CALLBACK_NOT_REGISTERED";
-        case APP_MSG_OUT_OF_MEMORY: return "APP_MSG_OUT_OF_MEMORY";
-        case APP_MSG_CLOSED: return "APP_MSG_CLOSED";
-        case APP_MSG_INTERNAL_ERROR: return "APP_MSG_INTERNAL_ERROR";
-        default: return "UNKNOWN ERROR";
+static void in_recv_handler(DictionaryIterator *iter, void *context) {
+    if (packet_contains_key(iter, MESSAGE_KEY_BG_COLOR)) {
+        pcb_background = GColorFromHEX(packet_get_integer(iter, MESSAGE_KEY_BG_COLOR));
+        persist_write_int(STORAGE_KEY_BG_COLOR, pcb_background.argb);
+        if (s_canvas_layer) {
+            layer_mark_dirty(s_canvas_layer);
+        }
     }
-}
-
-static AppSync s_sync;
-static uint8_t s_sync_buffer[32];
-
-static void sync_changed_handler(const uint32_t key,
-                                 const Tuple *new_tuple,
-                                 const Tuple *old_tuple,
-                                 void *context) {
-    bool dirty = false;
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "sync_changed: key %" PRIu32, key);
-    switch (key) {
-        case BACKGROUND_COLOR_KEY:
-            if (pcb_background.argb != new_tuple->value->uint8) {
-                pcb_background.argb = new_tuple->value->uint8;
-                persist_write_int(BACKGROUND_COLOR_KEY, pcb_background.argb);
-                dirty = true;
-            }
-            break;
-
-        case SILKSCREEN_COLOR_KEY:
-            if (pcb_silkscreen.argb != new_tuple->value->uint8) {
-                pcb_silkscreen.argb = new_tuple->value->uint8;
-                persist_write_int(SILKSCREEN_COLOR_KEY, pcb_silkscreen.argb);
-                dirty = true;
-            }
-            break;
-
-        default:
-            // ignore unknown keys
-            break;
+    if (packet_contains_key(iter, MESSAGE_KEY_SILK_COLOR)) {
+        pcb_silkscreen = GColorFromHEX(packet_get_integer(iter, MESSAGE_KEY_SILK_COLOR));
+        persist_write_int(STORAGE_KEY_SILK_COLOR, pcb_silkscreen.argb);
+        if (s_canvas_layer) {
+            layer_mark_dirty(s_canvas_layer);
+        }
     }
-    if (dirty && s_canvas_layer) {
-        layer_mark_dirty(s_canvas_layer);
+    if (packet_contains_key(iter, MESSAGE_KEY_VIBE_ON_BT)) {
+        vibe_on_bt = packet_get_integer(iter, MESSAGE_KEY_VIBE_ON_BT);
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "vibe_on_bt %d", vibe_on_bt);
+        persist_write_int(STORAGE_KEY_VIBE_ON_BT, vibe_on_bt);
+        connection_vibes_set_state(vibe_on_bt);
     }
-}
-
-static void sync_error_handler(DictionaryResult dict_error,
-                               AppMessageResult app_message_error, 
-                               void *context) {
-    APP_LOG(APP_LOG_LEVEL_WARNING, "sync error: %s", translate_error(app_message_error));
-}
-
-static void config_init(void) {
-    // no need for large inbox/outbox, just handling configuration messages
-    app_message_open(100, 100);
-
-    Tuplet initial_values[] = {
-        TupletInteger(BACKGROUND_COLOR_KEY, pcb_background.argb),
-        TupletInteger(SILKSCREEN_COLOR_KEY, pcb_silkscreen.argb)
-    };
-    app_sync_init(
-        &s_sync, s_sync_buffer, sizeof(s_sync_buffer), 
-        initial_values, ARRAY_LENGTH(initial_values), 
-        sync_changed_handler, sync_error_handler, NULL);
-}
-
-static void config_deinit(void) {
-    app_sync_deinit(&s_sync);
 }
 
 /************************************ UI **************************************/
@@ -173,17 +135,17 @@ static void update_proc(Layer *layer, GContext *ctx) {
     graphics_draw_text(
         ctx, label, s_ocra_font, time_box,
         GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-    
+
     // draw the resistor and the stripes
     graphics_context_set_compositing_mode(ctx, GCompOpSet);
     graphics_draw_bitmap_in_rect(ctx, s_resistor_img, bitmap_box);
 
     graphics_context_set_fill_color(ctx, resistor_colors[s_last_time.tm_hour / 10]);
     graphics_fill_rect(ctx, stripe1_box, 0, GCornerNone);
-    
+
     graphics_context_set_fill_color(ctx, resistor_colors[s_last_time.tm_hour % 10]);
     graphics_fill_rect(ctx, stripe2_box, 0, GCornerNone);
-    
+
     graphics_context_set_fill_color(ctx, resistor_colors[s_last_time.tm_min / 10]);
     graphics_fill_rect(ctx, stripe3_box, 0, GCornerNone);
 
@@ -206,25 +168,23 @@ static void window_unload(Window *window) {
 
 /*********************************** App **************************************/
 
-static void init() {
-    if (!persist_exists(BACKGROUND_COLOR_KEY)) {
-        persist_write_int(BACKGROUND_COLOR_KEY, pcb_background.argb);
-        persist_write_int(SILKSCREEN_COLOR_KEY, pcb_silkscreen.argb);
-    }
-    else {
-        pcb_background.argb = persist_read_int(BACKGROUND_COLOR_KEY);
-        pcb_silkscreen.argb = persist_read_int(SILKSCREEN_COLOR_KEY);
-    }
+EventHandle sTicksHandler;
+EventHandle sAppMessageRecv;
 
+static void init() {
+    pcb_background.argb = persist_read_int_with_default(STORAGE_KEY_BG_COLOR, pcb_background.argb);
+    pcb_silkscreen.argb = persist_read_int_with_default(STORAGE_KEY_SILK_COLOR, pcb_silkscreen.argb);
+    vibe_on_bt          = persist_read_int_with_default(STORAGE_KEY_VIBE_ON_BT, vibe_on_bt);
+    
     time_t t = time(NULL);
     struct tm *time_now = localtime(&t);
     tick_handler(time_now, MINUTE_UNIT);
 
     s_ocra_font = fonts_load_custom_font(
         resource_get_handle(RESOURCE_ID_FONT_OCR_A_20));
-    
+
     s_resistor_img = gbitmap_create_with_resource(RESOURCE_ID_RESISTOR_IMG);
-    
+
     s_main_window = window_create();
     window_set_window_handlers(s_main_window, (WindowHandlers) {
         .load = window_load,
@@ -232,12 +192,20 @@ static void init() {
     });
     window_stack_push(s_main_window, true);
 
-    tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
-    config_init();
+    sTicksHandler = events_tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+
+    connection_vibes_init();
+    connection_vibes_set_state(vibe_on_bt);
+
+    events_app_message_request_inbox_size(64);
+    sAppMessageRecv = events_app_message_register_inbox_received(in_recv_handler, NULL);
+    events_app_message_open();
 }
 
 static void deinit() {
-    config_deinit();
+    events_app_message_unsubscribe(sAppMessageRecv);
+    connection_vibes_deinit();
+    events_tick_timer_service_unsubscribe(sTicksHandler);
     window_destroy(s_main_window);
     gbitmap_destroy(s_resistor_img);
     fonts_unload_custom_font(s_ocra_font);
