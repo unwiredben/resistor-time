@@ -32,7 +32,6 @@ static const GColor8 resistor_colors[10] = {
 #define STORAGE_KEY_SILK_COLOR (1)
 #define STORAGE_KEY_VIBE_ON_BT (2)
 
-#define TEXT_HEIGHT  (24)
 #if PBL_ROUND
 #define Y_OFFSET (20)
 #else
@@ -44,6 +43,8 @@ static GColor pcb_silkscreen = { .argb = GColorWhiteARGB8 };
 static ConnectionVibesState vibe_on_bt = ConnectionVibesStateDisconnect;
 
 static GFont s_ocra_font;
+static uint8_t s_ocra_height;
+
 static GBitmap *s_resistor_img;
 
 static struct tm s_last_time;
@@ -117,8 +118,8 @@ static void update_proc(Layer *layer, GContext *ctx) {
     uint8_t resistor_base_x = (rect.size.w - 144) / 2;
     uint8_t resistor_base_y = (rect.size.h - 43) / 2;
     GRect bitmap_box  = {{0, resistor_base_y}, {rect.size.w, 43}};
-    GRect date_box    = {{0, Y_OFFSET}, {rect.size.w, TEXT_HEIGHT}};
-    GRect time_box    = {{0, rect.size.h - TEXT_HEIGHT - Y_OFFSET}, {rect.size.w, TEXT_HEIGHT}};
+    GRect date_box    = {{0, Y_OFFSET}, {rect.size.w, s_ocra_height}};
+    GRect time_box    = {{0, rect.size.h - s_ocra_height - Y_OFFSET - 4}, {rect.size.w, s_ocra_height}};
     GRect stripe1_box = {{resistor_base_x + 29, resistor_base_y + 2}, {8, 39}};
     GRect stripe2_box = {{resistor_base_x + 54, resistor_base_y + 8}, {9, 27}};
     GRect stripe3_box = {{resistor_base_x + 70, resistor_base_y + 8}, {8, 27}};
@@ -132,7 +133,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
         ctx, label, s_ocra_font, date_box,
         GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
     // draw "time R"
-    snprintf(label, 8, "%d%02d R", s_last_time.tm_hour, s_last_time.tm_min);
+    snprintf(label, 8, "%d%02d Ω", s_last_time.tm_hour, s_last_time.tm_min);
     //graphics_context_set_fill_color(ctx, GColorBlack);
     //graphics_fill_rect(ctx, time_box, 0, GCornerNone);
     graphics_draw_text(
@@ -184,8 +185,13 @@ static void init() {
     tick_handler(time_now, MINUTE_UNIT);
 
     s_ocra_font = fonts_load_custom_font(
-        resource_get_handle(RESOURCE_ID_FONT_OCR_A_20));
-
+        resource_get_handle(RESOURCE_ID_UBUNTU_MONO_22));
+    GSize size = graphics_text_layout_get_content_size(
+        "R1234", s_ocra_font, GRect(0, 0, 140, 140),
+        GTextOverflowModeWordWrap, GTextAlignmentLeft
+    );
+    s_ocra_height = size.h;
+    
     s_resistor_img = gbitmap_create_with_resource(RESOURCE_ID_RESISTOR_IMG);
 
     s_main_window = window_create();

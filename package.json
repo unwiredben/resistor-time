@@ -23,6 +23,13 @@
         "resources": {
             "media": [
                 {
+                    "characterRegex": "[ 0123456789R\u2126]",
+                    "file": "fonts/Ubuntu-M.ttf",
+                    "name": "UBUNTU_MONO_22",
+                    "targetPlatforms": null,
+                    "type": "font"
+                },
+                {
                     "file": "images/resistor.png",
                     "name": "RESISTOR_IMG",
                     "type": "bitmap"
@@ -36,12 +43,6 @@
                         "chalk"
                     ],
                     "type": "bitmap"
-                },
-                {
-                    "characterRegex": "[0123456789R]",
-                    "file": "fonts/OCRA.ttf",
-                    "name": "FONT_OCR_A_20",
-                    "type": "font"
                 }
             ]
         },
