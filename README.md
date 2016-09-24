@@ -6,6 +6,7 @@ This shows the current time as a resistor with the color code matching the time 
 This only works on the Basalt and Chalk color platforms, as there's no point trying to show
 resistor color codes on a black and white watch.
 
+* Version 1.5 fixed a bug with four digit times not displaying.  UTF-8 takes up more buffer space, sadly.
 * Version 1.4 switches to SDK 4, uses Clay for the configuration page (no more server!), supports
   custom colors, Bluetooth disconnection vibration, and changing display during quick view.  It also
   switches the font to Ubuntu Mono so we can show the ohm symbol.
