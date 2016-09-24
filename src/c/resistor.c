@@ -34,24 +34,10 @@ static const GColor8 resistor_colors[10] = {
 
 #define TEXT_HEIGHT  (24)
 #if PBL_ROUND
-#define RECT_WIDTH  (180)
-#define RECT_HEIGHT (180)
 #define Y_OFFSET (20)
 #else
-#define RECT_WIDTH  (144)
-#define RECT_HEIGHT (168)
 #define Y_OFFSET (4)
 #endif
-
-#define RESISTOR_BASE_X ((int)((RECT_WIDTH - 144) / 2))
-#define RESISTOR_BASE_Y ((int)((RECT_HEIGHT - 43) / 2))
-static const GRect bitmap_box  = {{0, RESISTOR_BASE_Y}, {RECT_WIDTH, 43}};
-static const GRect date_box    = {{0, Y_OFFSET}, {RECT_WIDTH, TEXT_HEIGHT}};
-static const GRect time_box    = {{0, RECT_HEIGHT - TEXT_HEIGHT - Y_OFFSET}, {RECT_WIDTH, TEXT_HEIGHT}};
-static const GRect stripe1_box = {{RESISTOR_BASE_X + 29, RESISTOR_BASE_Y + 2}, {8, 39}};
-static const GRect stripe2_box = {{RESISTOR_BASE_X + 54, RESISTOR_BASE_Y + 8}, {9, 27}};
-static const GRect stripe3_box = {{RESISTOR_BASE_X + 70, RESISTOR_BASE_Y + 8}, {8, 27}};
-static const GRect stripe4_box = {{RESISTOR_BASE_X + 85, RESISTOR_BASE_Y + 8}, {8, 27}};
 
 static GColor pcb_background = { .argb = GColorKellyGreenARGB8 };
 static GColor pcb_silkscreen = { .argb = GColorWhiteARGB8 };
@@ -114,13 +100,30 @@ static void tick_handler(struct tm *tick_time, TimeUnits changed) {
     }
 }
 
+static void HandleObstructedAreaChange(AnimationProgress progress, void *context) {
+    
+}
+
 static void update_proc(Layer *layer, GContext *ctx) {
+    GRect rect = layer_get_unobstructed_bounds(layer);
+    
     graphics_context_set_fill_color(ctx, pcb_background);
-    graphics_fill_rect(ctx, layer_get_bounds(layer), 0, GCornerNone);
+    graphics_fill_rect(ctx, rect, 0, GCornerNone);
 
     graphics_context_set_text_color(ctx, pcb_silkscreen);
     char label[8];
 
+    // adjust drawing locations
+    uint8_t resistor_base_x = (rect.size.w - 144) / 2;
+    uint8_t resistor_base_y = (rect.size.h - 43) / 2;
+    GRect bitmap_box  = {{0, resistor_base_y}, {rect.size.w, 43}};
+    GRect date_box    = {{0, Y_OFFSET}, {rect.size.w, TEXT_HEIGHT}};
+    GRect time_box    = {{0, rect.size.h - TEXT_HEIGHT - Y_OFFSET}, {rect.size.w, TEXT_HEIGHT}};
+    GRect stripe1_box = {{resistor_base_x + 29, resistor_base_y + 2}, {8, 39}};
+    GRect stripe2_box = {{resistor_base_x + 54, resistor_base_y + 8}, {9, 27}};
+    GRect stripe3_box = {{resistor_base_x + 70, resistor_base_y + 8}, {8, 27}};
+    GRect stripe4_box = {{resistor_base_x + 85, resistor_base_y + 8}, {8, 27}};
+    
     // draw "Rdate"
     snprintf(label, 8, "R%02d%02d", s_last_time.tm_mon + 1, s_last_time.tm_mday);
     //graphics_context_set_fill_color(ctx, GColorBlack);
