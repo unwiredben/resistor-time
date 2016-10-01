@@ -8,6 +8,8 @@
     },
     "keywords": [],
     "name": "resistor",
+    "license": "MIT",
+    "repository": "unwiredben/resistor-time",
     "pebble": {
         "capabilities": [
             "configurable"
