@@ -19,7 +19,8 @@
         "messageKeys": [
             "SILK_COLOR",
             "BG_COLOR",
-            "VIBE_ON_BT"
+            "VIBE_ON_BT",
+            "RESISTOR_TYPE"
         ],
         "projectType": "native",
         "resources": {
@@ -34,6 +35,16 @@
                 {
                     "file": "images/resistor.png",
                     "name": "RESISTOR_IMG",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/surface-mount.png",
+                    "name": "SURFACE_MOUNT_IMG",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/nycr.png",
+                    "name": "NYCR_IMG",
                     "type": "bitmap"
                 },
                 {
@@ -58,5 +69,5 @@
             "watchface": true
         }
     },
-    "version": "1.5.0"
+    "version": "2.0.0"
 }

@@ -9,6 +9,26 @@ var clayConfig = [
     },
     {
         "type": "radiogroup",
+        "messageKey": "resType",
+        "label": "Resistor type",
+        "defaultValue": "0",
+        "options": [
+            { 
+                "label": "Through Hole", 
+                "value": "0"
+            },
+            { 
+                "label": "Surface Mount", 
+                "value": "1"
+            },
+            { 
+                "label": "NYC Resistor", 
+                "value": "2"
+            }
+        ]
+    },
+    {
+        "type": "radiogroup",
         "messageKey": "choice",
         "label": "Silkscreen color",
         "defaultValue": "white-on-green",
@@ -24,6 +44,10 @@ var clayConfig = [
             { 
                 "label": "White with black text", 
                 "value": "black-on-white"
+            },
+            { 
+                "label": "OSH Park", 
+                "value": "white-on-purple"
             },
             {
                 "label": "Custom",
@@ -114,6 +138,7 @@ Pebble.addEventListener('webviewclosed', function(e) {
         VIBE_ON_BT: parseInt(dict.vibeOnBT.value),
         SILK_COLOR: 0xFFFFFF, // White
         BG_COLOR:   0x55AA00, // KellyGreen
+        RESISTOR_TYPE: parseInt(dict.resType.value)
     };
 
     // "white-on-green" is default
@@ -123,6 +148,9 @@ Pebble.addEventListener('webviewclosed', function(e) {
     } else if (dict.choice.value == "white-on-black") {
         msg.SILK_COLOR = 0xFFFFFF; // White
         msg.BG_COLOR =   0x000000; // Black
+    } else if (dict.choice.value == "white-on-purple") {
+        msg.SILK_COLOR = 0xFFFFFF; // White
+        msg.BG_COLOR =   0xAA00AA; // Purple
     }
     else if (dict.choice.value == "custom") {
         msg.SILK_COLOR = dict.fgColor.value;

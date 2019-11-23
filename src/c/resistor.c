@@ -28,9 +28,10 @@ static const GColor8 resistor_colors[10] = {
 };
 
 // used for persistent storage
-#define STORAGE_KEY_BG_COLOR   (0)
-#define STORAGE_KEY_SILK_COLOR (1)
-#define STORAGE_KEY_VIBE_ON_BT (2)
+#define STORAGE_KEY_BG_COLOR        (0)
+#define STORAGE_KEY_SILK_COLOR      (1)
+#define STORAGE_KEY_VIBE_ON_BT      (2)
+#define STORAGE_KEY_RESISTOR_TYPE   (3)
 
 #if PBL_ROUND
 #define Y_OFFSET (20)
@@ -40,9 +41,16 @@ static const GColor8 resistor_colors[10] = {
 
 #define OHM "\xE2\x84\xA6"
 
+typedef enum ResistorType {
+    THROUGH_HOLE = 0,
+    SURFACE_MOUNT = 1,
+    NYC_RESISTOR = 2
+} ResistorType;
+
 static GColor pcb_background = { .argb = GColorKellyGreenARGB8 };
 static GColor pcb_silkscreen = { .argb = GColorWhiteARGB8 };
 static ConnectionVibesState vibe_on_bt = ConnectionVibesStateDisconnect;
+static uint8_t resistor_type = THROUGH_HOLE;
 
 static GFont s_ocra_font;
 static uint8_t s_ocra_height;
@@ -64,6 +72,23 @@ static int persist_read_int_with_default(const uint32_t key, const int32_t defau
     else {
         return persist_read_int(key);
     }    
+}
+
+static void init_resistor_image(void) {
+    if (s_resistor_img) {
+        gbitmap_destroy(s_resistor_img);
+    }
+    switch (resistor_type) {
+    case THROUGH_HOLE:
+        s_resistor_img = gbitmap_create_with_resource(RESOURCE_ID_RESISTOR_IMG);
+        break;
+    case SURFACE_MOUNT:
+        s_resistor_img = gbitmap_create_with_resource(RESOURCE_ID_SURFACE_MOUNT_IMG);
+        break;
+    case NYC_RESISTOR:
+        s_resistor_img = gbitmap_create_with_resource(RESOURCE_ID_NYCR_IMG);
+        break;
+    }
 }
 
 /********************************** CONFIG ************************************/
@@ -88,6 +113,14 @@ static void in_recv_handler(DictionaryIterator *iter, void *context) {
         persist_write_int(STORAGE_KEY_VIBE_ON_BT, vibe_on_bt);
         connection_vibes_set_state(vibe_on_bt);
     }
+    if (packet_contains_key(iter, MESSAGE_KEY_RESISTOR_TYPE)) {
+        resistor_type = packet_get_integer(iter, MESSAGE_KEY_RESISTOR_TYPE);
+        persist_write_int(STORAGE_KEY_RESISTOR_TYPE, resistor_type);
+        init_resistor_image();
+        if (s_canvas_layer) {
+            layer_mark_dirty(s_canvas_layer);
+        }
+    }
 }
 
 /************************************ UI **************************************/
@@ -102,37 +135,21 @@ static void tick_handler(struct tm *tick_time, TimeUnits changed) {
     }
 }
 
-static void update_proc(Layer *layer, GContext *ctx) {
+static void draw_through_hole(Layer *layer, GContext *ctx) {
     GRect rect = layer_get_unobstructed_bounds(layer);
-    
-    graphics_context_set_fill_color(ctx, pcb_background);
-    graphics_fill_rect(ctx, rect, 0, GCornerNone);
-
-    graphics_context_set_text_color(ctx, pcb_silkscreen);
-    char label[12];
 
     // adjust drawing locations
     uint8_t resistor_base_x = (rect.size.w - 144) / 2;
-    uint8_t resistor_base_y = (rect.size.h - 43) / 2;
-    GRect bitmap_box  = {{0, resistor_base_y}, {rect.size.w, 43}};
-    GRect date_box    = {{0, Y_OFFSET}, {rect.size.w, s_ocra_height}};
-    GRect time_box    = {{0, rect.size.h - s_ocra_height - Y_OFFSET - 4}, {rect.size.w, s_ocra_height}};
+    GRect bitmap_box  = gbitmap_get_bounds(s_resistor_img);
+    uint8_t resistor_base_y = (rect.size.h - bitmap_box.size.h) / 2;
+    bitmap_box.origin.x = (rect.size.w - bitmap_box.size.w) / 2;
+    bitmap_box.origin.y = resistor_base_y;
+
     GRect stripe1_box = {{resistor_base_x + 29, resistor_base_y + 2}, {8, 39}};
     GRect stripe2_box = {{resistor_base_x + 54, resistor_base_y + 8}, {9, 27}};
     GRect stripe3_box = {{resistor_base_x + 70, resistor_base_y + 8}, {8, 27}};
     GRect stripe4_box = {{resistor_base_x + 85, resistor_base_y + 8}, {8, 27}};
-    
-    // draw "Rdate"
-    snprintf(label, 12, "R%02d%02d", s_last_time.tm_mon + 1, s_last_time.tm_mday);
-    graphics_draw_text(
-        ctx, label, s_ocra_font, date_box,
-        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-    // draw "time ohm"
-    snprintf(label, 12, "%d%02d " OHM, s_last_time.tm_hour, s_last_time.tm_min);
-    graphics_draw_text(
-        ctx, label, s_ocra_font, time_box,
-        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-    
+        
     // draw the resistor and the stripes
     graphics_context_set_compositing_mode(ctx, GCompOpSet);
     graphics_draw_bitmap_in_rect(ctx, s_resistor_img, bitmap_box);
@@ -148,6 +165,73 @@ static void update_proc(Layer *layer, GContext *ctx) {
 
     graphics_context_set_fill_color(ctx, resistor_colors[s_last_time.tm_min % 10]);
     graphics_fill_rect(ctx, stripe4_box, 0, GCornerNone);
+}
+
+static void draw_surface_mount(Layer *layer, GContext *ctx) {
+    GRect rect = layer_get_unobstructed_bounds(layer);
+
+    // adjust drawing locations
+    GRect bitmap_box  = gbitmap_get_bounds(s_resistor_img);
+    uint8_t resistor_base_y = (rect.size.h - bitmap_box.size.h) / 2;
+    bitmap_box.origin.x = (rect.size.w - bitmap_box.size.w) / 2;
+    bitmap_box.origin.y = resistor_base_y;
+        
+    // draw the surface mount resistor
+    graphics_context_set_compositing_mode(ctx, GCompOpSet);
+    graphics_draw_bitmap_in_rect(ctx, s_resistor_img, bitmap_box);
+
+    // draw the digits on the surface mount resistor
+}
+
+static void draw_nyc_resistor(Layer *layer, GContext *ctx) {
+    GRect rect = layer_get_unobstructed_bounds(layer);
+
+    // adjust drawing locations
+    GRect bitmap_box  = gbitmap_get_bounds(s_resistor_img);
+    uint8_t resistor_base_y = (rect.size.h - bitmap_box.size.h) / 2;
+    bitmap_box.origin.x = (rect.size.w - bitmap_box.size.w) / 2;
+    bitmap_box.origin.y = resistor_base_y;
+        
+    // draw the NYC resistor logo
+    graphics_context_set_compositing_mode(ctx, GCompOpSet);
+    graphics_draw_bitmap_in_rect(ctx, s_resistor_img, bitmap_box);
+}
+
+static void update_proc(Layer *layer, GContext *ctx) {
+    GRect rect = layer_get_unobstructed_bounds(layer);
+    
+    graphics_context_set_fill_color(ctx, pcb_background);
+    graphics_fill_rect(ctx, rect, 0, GCornerNone);
+
+    graphics_context_set_text_color(ctx, pcb_silkscreen);
+    char label[12];
+
+    // adjust drawing locations
+    GRect date_box    = {{0, Y_OFFSET}, {rect.size.w, s_ocra_height}};
+    GRect time_box    = {{0, rect.size.h - s_ocra_height - Y_OFFSET - 4}, {rect.size.w, s_ocra_height}};
+    
+    // draw "Rdate"
+    snprintf(label, 12, "R%02d%02d", s_last_time.tm_mon + 1, s_last_time.tm_mday);
+    graphics_draw_text(
+        ctx, label, s_ocra_font, date_box,
+        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+    // draw "time ohm"
+    snprintf(label, 12, "%d " OHM, s_last_time.tm_hour * 100 + s_last_time.tm_min);
+    graphics_draw_text(
+        ctx, label, s_ocra_font, time_box,
+        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+    
+    switch (resistor_type) {
+    case THROUGH_HOLE:
+        draw_through_hole(layer, ctx);
+        break;
+    case SURFACE_MOUNT:
+        draw_surface_mount(layer, ctx);
+        break;
+    case NYC_RESISTOR:
+        draw_nyc_resistor(layer, ctx);
+        break;
+    }
 }
 
 static void window_load(Window *window) {
@@ -168,7 +252,7 @@ static void window_unload(Window *window) {
 EventHandle sTicksHandler;
 EventHandle sAppMessageRecv;
 
-static void init() {
+static void init(void) {
     pcb_background.argb = persist_read_int_with_default(STORAGE_KEY_BG_COLOR, pcb_background.argb);
     pcb_silkscreen.argb = persist_read_int_with_default(STORAGE_KEY_SILK_COLOR, pcb_silkscreen.argb);
     vibe_on_bt          = persist_read_int_with_default(STORAGE_KEY_VIBE_ON_BT, vibe_on_bt);
@@ -185,7 +269,7 @@ static void init() {
     );
     s_ocra_height = size.h;
 
-    s_resistor_img = gbitmap_create_with_resource(RESOURCE_ID_RESISTOR_IMG);
+    init_resistor_image();
 
     s_main_window = window_create();
     window_set_window_handlers(s_main_window, (WindowHandlers) {
@@ -204,7 +288,7 @@ static void init() {
     events_app_message_open();
 }
 
-static void deinit() {
+static void deinit(void) {
     events_app_message_unsubscribe(sAppMessageRecv);
     connection_vibes_deinit();
     events_tick_timer_service_unsubscribe(sTicksHandler);
@@ -213,7 +297,7 @@ static void deinit() {
     fonts_unload_custom_font(s_ocra_font);
 }
 
-int main() {
+int main(void) {
     init();
     app_event_loop();
     deinit();
