@@ -55,6 +55,9 @@ static uint8_t resistor_type = THROUGH_HOLE;
 static GFont s_ocra_font;
 static uint8_t s_ocra_height;
 
+static GFont s_smt_font;
+static GSize s_smt_size;
+
 static GBitmap *s_resistor_img;
 
 static struct tm s_last_time;
@@ -181,6 +184,14 @@ static void draw_surface_mount(Layer *layer, GContext *ctx) {
     graphics_draw_bitmap_in_rect(ctx, s_resistor_img, bitmap_box);
 
     // draw the digits on the surface mount resistor
+    bitmap_box.origin.x -= 1;
+    bitmap_box.origin.y += 12;
+    char label[6];
+    snprintf(label, 6, "%04d", s_last_time.tm_hour * 100 + s_last_time.tm_min);
+    graphics_context_set_text_color(ctx, GColorWhite);
+    graphics_draw_text(
+        ctx, label, s_smt_font, bitmap_box,
+        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
 }
 
 static void draw_nyc_resistor(Layer *layer, GContext *ctx) {
@@ -209,6 +220,13 @@ static void update_proc(Layer *layer, GContext *ctx) {
     // adjust drawing locations
     GRect date_box    = {{0, Y_OFFSET}, {rect.size.w, s_ocra_height}};
     GRect time_box    = {{0, rect.size.h - s_ocra_height - Y_OFFSET - 4}, {rect.size.w, s_ocra_height}};
+
+#ifdef PBL_ROUND
+    if (resistor_type == NYC_RESISTOR) {
+        date_box.origin.y -= 10;
+        time_box.origin.y += 6;
+    }
+#endif
     
     // draw "Rdate"
     snprintf(label, 12, "R%02d%02d", s_last_time.tm_mon + 1, s_last_time.tm_mday);
@@ -265,9 +283,13 @@ static void init(void) {
         resource_get_handle(RESOURCE_ID_UBUNTU_MONO_22));
     GSize size = graphics_text_layout_get_content_size(
         "R89 " OHM, s_ocra_font, GRect(0, 0, 140, 140),
-        GTextOverflowModeWordWrap, GTextAlignmentLeft
-    );
+        GTextOverflowModeWordWrap, GTextAlignmentLeft);
     s_ocra_height = size.h;
+
+    s_smt_font = fonts_get_system_font(FONT_KEY_LECO_36_BOLD_NUMBERS);
+    s_smt_size = graphics_text_layout_get_content_size(
+        "0000", s_smt_font, GRect(0, 0, 140, 140),
+        GTextOverflowModeWordWrap, GTextAlignmentLeft);
 
     init_resistor_image();
 

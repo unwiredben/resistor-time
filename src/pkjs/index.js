@@ -150,7 +150,7 @@ Pebble.addEventListener('webviewclosed', function(e) {
         msg.BG_COLOR =   0x000000; // Black
     } else if (dict.choice.value == "white-on-purple") {
         msg.SILK_COLOR = 0xFFFFFF; // White
-        msg.BG_COLOR =   0xAA00AA; // Purple
+        msg.BG_COLOR =   0x550055; // Imperial Purple
     }
     else if (dict.choice.value == "custom") {
         msg.SILK_COLOR = dict.fgColor.value;
