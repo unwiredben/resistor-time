@@ -6,6 +6,10 @@
 // digits of the 24 hour time.  Below the resistor, the time is also drawn in digits with
 // an omega (the symbol for ohms), and the current date is indicated by the
 // white silkscreen of Rmmdd
+//
+// There are two alternate modes -- there's a surface mount resistor mode that
+// uses an image of a large SMT resistor and draws the time in numbers and there's a
+// mode that shows the NYC Resistor logo.
 
 #include <pebble.h>
 #include <inttypes.h>
@@ -210,7 +214,7 @@ static void draw_nyc_resistor(Layer *layer, GContext *ctx) {
 
 static void update_proc(Layer *layer, GContext *ctx) {
     GRect rect = layer_get_unobstructed_bounds(layer);
-    
+ 
     graphics_context_set_fill_color(ctx, pcb_background);
     graphics_fill_rect(ctx, rect, 0, GCornerNone);
 
@@ -228,17 +232,20 @@ static void update_proc(Layer *layer, GContext *ctx) {
     }
 #endif
     
-    // draw "Rdate"
-    snprintf(label, 12, "R%02d%02d", s_last_time.tm_mon + 1, s_last_time.tm_mday);
-    graphics_draw_text(
-        ctx, label, s_ocra_font, date_box,
-        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-    // draw "time ohm"
-    snprintf(label, 12, "%d " OHM, s_last_time.tm_hour * 100 + s_last_time.tm_min);
-    graphics_draw_text(
-        ctx, label, s_ocra_font, time_box,
-        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
-    
+    if (resistor_type == THROUGH_HOLE || rect.size.h > 130) {
+        // draw "Rdate"
+        snprintf(label, 12, "R%02d%02d", s_last_time.tm_mon + 1, s_last_time.tm_mday);
+        graphics_draw_text(
+            ctx, label, s_ocra_font, date_box,
+            GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+
+        // draw "time ohm"
+        snprintf(label, 12, "%d " OHM, s_last_time.tm_hour * 100 + s_last_time.tm_min);
+        graphics_draw_text(
+            ctx, label, s_ocra_font, time_box,
+            GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+    }
+
     switch (resistor_type) {
     case THROUGH_HOLE:
         draw_through_hole(layer, ctx);
@@ -274,7 +281,8 @@ static void init(void) {
     pcb_background.argb = persist_read_int_with_default(STORAGE_KEY_BG_COLOR, pcb_background.argb);
     pcb_silkscreen.argb = persist_read_int_with_default(STORAGE_KEY_SILK_COLOR, pcb_silkscreen.argb);
     vibe_on_bt          = persist_read_int_with_default(STORAGE_KEY_VIBE_ON_BT, vibe_on_bt);
-    
+    resistor_type       = persist_read_int_with_default(STORAGE_KEY_RESISTOR_TYPE, resistor_type);
+
     time_t t = time(NULL);
     struct tm *time_now = localtime(&t);
     tick_handler(time_now, MINUTE_UNIT);
