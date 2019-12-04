@@ -36,6 +36,7 @@ static const GColor8 resistor_colors[10] = {
 #define STORAGE_KEY_SILK_COLOR      (1)
 #define STORAGE_KEY_VIBE_ON_BT      (2)
 #define STORAGE_KEY_RESISTOR_TYPE   (3)
+#define STORAGE_KEY_LOWER_LABEL     (4)
 
 #if PBL_ROUND
 #define Y_OFFSET (20)
@@ -48,13 +49,22 @@ static const GColor8 resistor_colors[10] = {
 typedef enum ResistorType {
     THROUGH_HOLE = 0,
     SURFACE_MOUNT = 1,
-    NYC_RESISTOR = 2
+    NYC_RESISTOR = 2,
+    CYCLE_RESISTORS = 3
 } ResistorType;
+
+typedef enum LowerLabelType {
+    STANDARD_TIME = 0,
+    BEATS = 1,
+    ALTERNATE = 2
+} LowerLabelType;
 
 static GColor pcb_background = { .argb = GColorKellyGreenARGB8 };
 static GColor pcb_silkscreen = { .argb = GColorWhiteARGB8 };
 static ConnectionVibesState vibe_on_bt = ConnectionVibesStateDisconnect;
 static uint8_t resistor_type = THROUGH_HOLE;
+static bool cycle_resistors = false;
+static LowerLabelType lower_label = STANDARD_TIME;
 
 static GFont s_ocra_font;
 static uint8_t s_ocra_height;
@@ -63,6 +73,8 @@ static GFont s_smt_font;
 static GSize s_smt_size;
 
 static GBitmap *s_resistor_img;
+static GBitmap *s_smt_resistor_img;
+static GBitmap *s_nyc_resistor_img;
 
 static struct tm s_last_time;
 
@@ -81,21 +93,23 @@ static int persist_read_int_with_default(const uint32_t key, const int32_t defau
     }    
 }
 
-static void init_resistor_image(void) {
-    if (s_resistor_img) {
-        gbitmap_destroy(s_resistor_img);
+static int current_time_in_beats(void) {
+    // compute beats by figuring difference in seconds between
+    // current time and 0100 UTC for current day, then offset
+    // negative results by 23 hours.
+    time_t now = time(NULL);
+    struct tm ref = *gmtime(&now);
+    ref.tm_hour = 1;
+    ref.tm_min = 0;
+    ref.tm_sec = 0;
+    time_t beats_base = mktime(&ref);
+    int diff = now - beats_base;
+    if (diff < 0) {
+        diff = diff + (60 * 60 * 23);
     }
-    switch (resistor_type) {
-    case THROUGH_HOLE:
-        s_resistor_img = gbitmap_create_with_resource(RESOURCE_ID_RESISTOR_IMG);
-        break;
-    case SURFACE_MOUNT:
-        s_resistor_img = gbitmap_create_with_resource(RESOURCE_ID_SURFACE_MOUNT_IMG);
-        break;
-    case NYC_RESISTOR:
-        s_resistor_img = gbitmap_create_with_resource(RESOURCE_ID_NYCR_IMG);
-        break;
-    }
+    // now scale by 1000 then divide by the number of seconds in a day
+    int beats = diff * 1000 / (60 * 60 * 24);
+    return beats;
 }
 
 /********************************** CONFIG ************************************/
@@ -123,7 +137,22 @@ static void in_recv_handler(DictionaryIterator *iter, void *context) {
     if (packet_contains_key(iter, MESSAGE_KEY_RESISTOR_TYPE)) {
         resistor_type = packet_get_integer(iter, MESSAGE_KEY_RESISTOR_TYPE);
         persist_write_int(STORAGE_KEY_RESISTOR_TYPE, resistor_type);
-        init_resistor_image();
+ 
+        if (resistor_type == CYCLE_RESISTORS) {
+            cycle_resistors = true;
+            resistor_type = THROUGH_HOLE;
+        }
+        else {
+            cycle_resistors = false;
+        }
+ 
+        if (s_canvas_layer) {
+            layer_mark_dirty(s_canvas_layer);
+        }
+    }
+    if (packet_contains_key(iter, MESSAGE_KEY_LOWER_LABEL)) {
+        lower_label = packet_get_integer(iter, MESSAGE_KEY_LOWER_LABEL);
+        persist_write_int(STORAGE_KEY_LOWER_LABEL, lower_label);
         if (s_canvas_layer) {
             layer_mark_dirty(s_canvas_layer);
         }
@@ -132,12 +161,30 @@ static void in_recv_handler(DictionaryIterator *iter, void *context) {
 
 /************************************ UI **************************************/
 
+static void update_resistor_type(void) {
+    if (cycle_resistors) {
+        if (s_last_time.tm_sec == 0) {
+            resistor_type = THROUGH_HOLE;
+        }
+        else if (s_last_time.tm_sec == 20) {
+            resistor_type = SURFACE_MOUNT;
+        }
+        else if (s_last_time.tm_sec == 40) {
+            resistor_type = NYC_RESISTOR;
+        }
+    }
+}
+
 static void tick_handler(struct tm *tick_time, TimeUnits changed) {
     // Store time
     s_last_time = *tick_time;
 
-    // Redraw
-    if (s_canvas_layer) {
+    int sec = s_last_time.tm_sec;
+
+    if (s_canvas_layer &&
+        (sec == 0 ||
+        (cycle_resistors && (sec == 20 || sec == 40)) ||
+        (lower_label == ALTERNATE && sec == 30))) {
         layer_mark_dirty(s_canvas_layer);
     }
 }
@@ -178,14 +225,14 @@ static void draw_surface_mount(Layer *layer, GContext *ctx) {
     GRect rect = layer_get_unobstructed_bounds(layer);
 
     // adjust drawing locations
-    GRect bitmap_box  = gbitmap_get_bounds(s_resistor_img);
+    GRect bitmap_box  = gbitmap_get_bounds(s_smt_resistor_img);
     uint8_t resistor_base_y = (rect.size.h - bitmap_box.size.h) / 2;
     bitmap_box.origin.x = (rect.size.w - bitmap_box.size.w) / 2;
     bitmap_box.origin.y = resistor_base_y;
         
     // draw the surface mount resistor
     graphics_context_set_compositing_mode(ctx, GCompOpSet);
-    graphics_draw_bitmap_in_rect(ctx, s_resistor_img, bitmap_box);
+    graphics_draw_bitmap_in_rect(ctx, s_smt_resistor_img, bitmap_box);
 
     // draw the digits on the surface mount resistor
     bitmap_box.origin.x -= 1;
@@ -202,17 +249,19 @@ static void draw_nyc_resistor(Layer *layer, GContext *ctx) {
     GRect rect = layer_get_unobstructed_bounds(layer);
 
     // adjust drawing locations
-    GRect bitmap_box  = gbitmap_get_bounds(s_resistor_img);
+    GRect bitmap_box  = gbitmap_get_bounds(s_nyc_resistor_img);
     uint8_t resistor_base_y = (rect.size.h - bitmap_box.size.h) / 2;
     bitmap_box.origin.x = (rect.size.w - bitmap_box.size.w) / 2;
     bitmap_box.origin.y = resistor_base_y;
         
     // draw the NYC resistor logo
     graphics_context_set_compositing_mode(ctx, GCompOpSet);
-    graphics_draw_bitmap_in_rect(ctx, s_resistor_img, bitmap_box);
+    graphics_draw_bitmap_in_rect(ctx, s_nyc_resistor_img, bitmap_box);
 }
 
 static void update_proc(Layer *layer, GContext *ctx) {
+    update_resistor_type();
+
     GRect rect = layer_get_unobstructed_bounds(layer);
  
     graphics_context_set_fill_color(ctx, pcb_background);
@@ -239,11 +288,21 @@ static void update_proc(Layer *layer, GContext *ctx) {
             ctx, label, s_ocra_font, date_box,
             GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
 
-        // draw "time ohm"
-        snprintf(label, 12, "%d " OHM, s_last_time.tm_hour * 100 + s_last_time.tm_min);
-        graphics_draw_text(
-            ctx, label, s_ocra_font, time_box,
-            GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+        if (lower_label == BEATS ||
+            (lower_label == ALTERNATE && s_last_time.tm_sec >= 30)) {
+            // draw ".beats"
+            snprintf(label, 12, "@ %d", current_time_in_beats());
+            graphics_draw_text(
+                ctx, label, s_ocra_font, time_box,
+                GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+        }
+        else {
+            // draw "time ohm"
+            snprintf(label, 12, "%d " OHM, s_last_time.tm_hour * 100 + s_last_time.tm_min);
+            graphics_draw_text(
+                ctx, label, s_ocra_font, time_box,
+                GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+        }
     }
 
     switch (resistor_type) {
@@ -282,10 +341,16 @@ static void init(void) {
     pcb_silkscreen.argb = persist_read_int_with_default(STORAGE_KEY_SILK_COLOR, pcb_silkscreen.argb);
     vibe_on_bt          = persist_read_int_with_default(STORAGE_KEY_VIBE_ON_BT, vibe_on_bt);
     resistor_type       = persist_read_int_with_default(STORAGE_KEY_RESISTOR_TYPE, resistor_type);
+    lower_label         = persist_read_int_with_default(STORAGE_KEY_LOWER_LABEL, lower_label);
+
+    if (resistor_type == CYCLE_RESISTORS) {
+        cycle_resistors = true;
+        resistor_type = THROUGH_HOLE;
+    }
 
     time_t t = time(NULL);
     struct tm *time_now = localtime(&t);
-    tick_handler(time_now, MINUTE_UNIT);
+    tick_handler(time_now, SECOND_UNIT);
 
     s_ocra_font = fonts_load_custom_font(
         resource_get_handle(RESOURCE_ID_UBUNTU_MONO_22));
@@ -299,7 +364,9 @@ static void init(void) {
         "0000", s_smt_font, GRect(0, 0, 140, 140),
         GTextOverflowModeWordWrap, GTextAlignmentLeft);
 
-    init_resistor_image();
+    s_resistor_img = gbitmap_create_with_resource(RESOURCE_ID_RESISTOR_IMG);
+    s_smt_resistor_img = gbitmap_create_with_resource(RESOURCE_ID_SURFACE_MOUNT_IMG);
+    s_nyc_resistor_img = gbitmap_create_with_resource(RESOURCE_ID_NYCR_IMG);
 
     s_main_window = window_create();
     window_set_window_handlers(s_main_window, (WindowHandlers) {
@@ -308,7 +375,7 @@ static void init(void) {
     });
     window_stack_push(s_main_window, true);
 
-    sTicksHandler = events_tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+    sTicksHandler = events_tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
 
     connection_vibes_init();
     connection_vibes_set_state(vibe_on_bt);
@@ -324,6 +391,8 @@ static void deinit(void) {
     events_tick_timer_service_unsubscribe(sTicksHandler);
     window_destroy(s_main_window);
     gbitmap_destroy(s_resistor_img);
+    gbitmap_destroy(s_smt_resistor_img);
+    gbitmap_destroy(s_nyc_resistor_img);
     fonts_unload_custom_font(s_ocra_font);
 }
 

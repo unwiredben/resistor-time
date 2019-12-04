@@ -1,10 +1,10 @@
 {
     "author": "Ben Combee",
     "dependencies": {
-        "pebble-clay": "^1.0.2",
-        "pebble-connection-vibes": "^1.0.1",
-        "pebble-events": "^1.1.0",
-        "pebble-packet": "^1.2.0"
+        "pebble-clay": "^1.0.4",
+        "pebble-connection-vibes": "^1.1.0",
+        "pebble-events": "^1.2.0",
+        "pebble-packet": "^1.3.2"
     },
     "keywords": [],
     "name": "resistor",
@@ -20,13 +20,14 @@
             "SILK_COLOR",
             "BG_COLOR",
             "VIBE_ON_BT",
-            "RESISTOR_TYPE"
+            "RESISTOR_TYPE",
+            "LOWER_LABEL"
         ],
         "projectType": "native",
         "resources": {
             "media": [
                 {
-                    "characterRegex": "[ 0123456789R\u2126]",
+                    "characterRegex": "[ 0123456789@R\u2126]",
                     "file": "fonts/Ubuntu-M.ttf",
                     "name": "UBUNTU_MONO_22",
                     "targetPlatforms": null,
@@ -69,5 +70,5 @@
             "watchface": true
         }
     },
-    "version": "2.1.0"
+    "version": "2.2.0"
 }
