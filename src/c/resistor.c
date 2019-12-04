@@ -94,21 +94,12 @@ static int persist_read_int_with_default(const uint32_t key, const int32_t defau
 }
 
 static int current_time_in_beats(void) {
-    // compute beats by figuring difference in seconds between
-    // current time and 0100 UTC for current day, then offset
-    // negative results by 23 hours.
+    // compute beats by taking current time, converting to UTC+1,
+    // then converting to UTC struct tm and adding up second count
     time_t now = time(NULL);
+    now += (60 * 60);
     struct tm ref = *gmtime(&now);
-    ref.tm_hour = 1;
-    ref.tm_min = 0;
-    ref.tm_sec = 0;
-    time_t beats_base = mktime(&ref);
-    int diff = now - beats_base;
-    if (diff < 0) {
-        diff = diff + (60 * 60 * 23);
-    }
-    // now scale by 1000 then divide by the number of seconds in a day
-    int beats = diff * 1000 / (60 * 60 * 24);
+    int beats = (ref.tm_sec + (ref.tm_min * 60) + (ref.tm_hour * 60 * 60)) * 10 / 864;
     return beats;
 }
 
