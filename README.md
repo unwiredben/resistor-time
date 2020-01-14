@@ -8,6 +8,8 @@ This shows the current time as a resistor with the color code matching the time 
 This only works on the Basalt and Chalk color platforms, as there's no point trying to show
 resistor color codes on a black and white watch.
 
+* Version 2.2 is the first one published in the Rebble app store.  It adds surface mount resistors,
+  NYC Resistors, and beats time display.
 * Version 1.5 fixed a bug with four digit times not displaying.  UTF-8 takes up more buffer space, sadly.
 * Version 1.4 switches to SDK 4, uses Clay for the configuration page (no more server!), supports
   custom colors, Bluetooth disconnection vibration, and changing display during quick view.  It also
@@ -18,7 +20,7 @@ resistor color codes on a black and white watch.
 
 Licensed under the MIT License, see LICENSE for details.
 
-[![Available on the Pebble App Store](http://pblweb.com/badge/55561ff444dad6e1470000df/black/small)](https://apps.getpebble.com/applications/55561ff444dad6e1470000df)
+[Available on the Rebble App Store](https://store-beta.rebble.io/#/app/55561ff444dad6e1470000df)
 
 ![Screenshot - White on Green](screenshots/resistor-time-green.png) &nbsp;
 ![Screenshot - Black on White](screenshots/resistor-time-white.png) &nbsp;
