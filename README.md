@@ -6,6 +6,7 @@ This shows the current time as a resistor with the color code matching the time 
 This only works on the Basalt and Chalk color platforms, as there's no point trying to show
 resistor color codes on a black and white watch.
 
+* Version 2.3 adds a "shake to switch" feature for toggling between 24-hour time and beats.
 * Version 2.2 is the first one published in the Rebble app store.  It adds surface mount resistors,
   NYC Resistors, and beats time display.
 * Version 1.5 fixed a bug with four digit times not displaying.  UTF-8 takes up more buffer space, sadly.
