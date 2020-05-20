@@ -96,6 +96,10 @@
             {
               label: "Switch every 30 seconds",
               value: "2"
+            },
+            {
+              label: "Switch on shake",
+              value: "3"
             }
           ]
         },

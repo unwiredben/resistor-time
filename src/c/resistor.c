@@ -56,7 +56,8 @@ typedef enum ResistorType {
 typedef enum LowerLabelType {
     STANDARD_TIME = 0,
     BEATS = 1,
-    ALTERNATE = 2
+    ALTERNATE = 2,
+    SWITCH_ON_SHAKE = 3
 } LowerLabelType;
 
 static GColor pcb_background = { .argb = GColorKellyGreenARGB8 };
@@ -77,6 +78,8 @@ static GBitmap *s_smt_resistor_img;
 static GBitmap *s_nyc_resistor_img;
 
 static struct tm s_last_time;
+
+static bool s_show_beats = false;
 
 static Window *s_main_window;
 static Layer *s_canvas_layer;
@@ -180,6 +183,15 @@ static void tick_handler(struct tm *tick_time, TimeUnits changed) {
     }
 }
 
+static void tap_handler(AccelAxisType axis, int32_t direction) {
+    if (lower_label == SWITCH_ON_SHAKE) {
+        s_show_beats = !s_show_beats;
+        if (s_canvas_layer) {
+            layer_mark_dirty(s_canvas_layer);
+        }    
+    }
+}
+
 static void draw_through_hole(Layer *layer, GContext *ctx) {
     GRect rect = layer_get_unobstructed_bounds(layer);
 
@@ -280,7 +292,8 @@ static void update_proc(Layer *layer, GContext *ctx) {
             GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
 
         if (lower_label == BEATS ||
-            (lower_label == ALTERNATE && s_last_time.tm_sec >= 30)) {
+            (lower_label == ALTERNATE && s_last_time.tm_sec >= 30) ||
+            (lower_label == SWITCH_ON_SHAKE && s_show_beats)) {
             // draw ".beats"
             snprintf(label, 12, "@ %d", current_time_in_beats());
             graphics_draw_text(
@@ -326,6 +339,7 @@ static void window_unload(Window *window) {
 
 EventHandle sTicksHandler;
 EventHandle sAppMessageRecv;
+EventHandle sAccelHandler;
 
 static void init(void) {
     pcb_background.argb = persist_read_int_with_default(STORAGE_KEY_BG_COLOR, pcb_background.argb);
@@ -374,9 +388,12 @@ static void init(void) {
     events_app_message_request_inbox_size(64);
     sAppMessageRecv = events_app_message_register_inbox_received(in_recv_handler, NULL);
     events_app_message_open();
+
+    sAccelHandler = events_accel_tap_service_subscribe(tap_handler);
 }
 
 static void deinit(void) {
+    events_accel_tap_service_unsubscribe(sAccelHandler);
     events_app_message_unsubscribe(sAppMessageRecv);
     connection_vibes_deinit();
     events_tick_timer_service_unsubscribe(sTicksHandler);
